@@ -1,0 +1,19 @@
+{
+  "name": "social-network-app",
+  "version": "1.0.0",
+  "description": "Build a Social network backend for users to connect and share posts. A user should be able to sign up and follow/unfollow other users. A feed will show all the posts by users we follow. Additionally the feed can be hidden behind a paywall and integrated with stripe to create a subscription or a one time payment option. Another layer of users could be added to moderate the content on the network.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Affaq-Ahmed/Social-Network-App.git"
+  },
+  "author": "Affaq",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Affaq-Ahmed/Social-Network-App/issues"
+  },
+  "homepage": "https://github.com/Affaq-Ahmed/Social-Network-App#readme"
+}
