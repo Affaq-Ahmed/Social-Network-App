@@ -6,6 +6,7 @@ import { logger } from './middleware/logger/index';
 
 import { dotEnv } from './startup/dotenv';
 import { mongoConnection } from './startup/database';
+import { gatherRoutes } from './startup/routes';
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+gatherRoutes(app);
 mongoConnection();
 
 app.listen(PORT, (): void => {

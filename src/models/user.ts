@@ -92,6 +92,16 @@ userSchema.methods.generateAuthToken = function () {
 	return this.save().then(() => token);
 };
 
+userSchema.methods.removeToken = function (token: string) {
+	this.tokens = this.tokens.filter((t: any) => t.token !== token);
+	return this.save();
+};
+
+userSchema.methods.removeAllTokens = function () {
+	this.tokens = [];
+	return this.save();
+};
+
 userSchema.plugin(MongooseDelete);
 
 const User = mongoose.model<IUser>('User', userSchema);
