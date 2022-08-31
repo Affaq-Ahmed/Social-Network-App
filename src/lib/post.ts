@@ -131,10 +131,15 @@ const remove = async (req: IGetUserAuthRequest, res: Response) => {
 	}
 };
 
+//pagination
 const allPostsByUser = async (req: IGetUserAuthRequest, res: Response) => {
+	const { page = 1, limit = 10 } = req.query;
 	const { user } = req;
 	try {
-		const posts = await Post.find({ createdBy: user._id });
+		const posts = await Post.find({ createdBy: user._id })
+			.skip(((page as number) - 1) * (limit as number))
+			.limit(limit as number)
+			.sort({ createdAt: -1 });
 		logger.info('Posts found');
 		return res.status(200).json({
 			message: 'Posts found',
@@ -147,6 +152,5 @@ const allPostsByUser = async (req: IGetUserAuthRequest, res: Response) => {
 		});
 	}
 };
-
 
 export { getAll, getById, create, update, remove, allPostsByUser };
