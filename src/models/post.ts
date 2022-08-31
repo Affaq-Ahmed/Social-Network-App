@@ -40,4 +40,6 @@ const postSchema: mongoose.Schema<IPost> = new mongoose.Schema(
 
 postSchema.plugin(MongooseDelete);
 
-export default mongoose.model<IPost>('Post', postSchema);
+const Post = mongoose.model<IPost>('Post', postSchema);
+
+export { Post, IPost };
