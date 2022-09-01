@@ -3,6 +3,10 @@ import { User, IUser } from '../models/user';
 import bcrypt from 'bcrypt';
 import { logger } from '../middleware/logger';
 import { IGetUserAuthRequest } from '../types/Request';
+import Stripe from 'stripe';
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+	apiVersion: '2022-08-01',
+});
 
 //pagination
 const getAll = async (req: IGetUserAuthRequest, res: Response) => {
@@ -124,4 +128,45 @@ const getFollowed = async (req: IGetUserAuthRequest, res: Response) => {
 	}
 };
 
-export { getAll, getById, follow, unfollow, getFollowed };
+const stripePayment = async (req: IGetUserAuthRequest, res: Response) => {
+	const { user } = req;
+	try {
+		const paymentMethod = await stripe.paymentMethods.create({
+			type: 'card',
+			card: {
+				number: '4242424242424242',
+				exp_month: 12,
+				exp_year: 2030,
+				cvc: '123',
+			},
+		});
+		const paymentIntent = await stripe.paymentIntents.create({
+			payment_method: paymentMethod.id,
+			amount: 1000,
+			currency: 'usd',
+			confirm: true,
+			payment_method_types: ['card'],
+		});
+		if (paymentIntent.status === 'succeeded') {
+			user.paid = true;
+			user.paymentIntentId = paymentIntent.id;
+			await user.save();
+			logger.info('Stripe payment succeeded');
+			return res.status(200).json({
+				message: 'Stripe payment succeeded',
+				user: user.publicProfile(),
+			});
+		}
+		logger.info('Stripe payment failed');
+		return res.status(400).json({
+			message: 'Stripe payment failed',
+		});
+	} catch (error: any) {
+		logger.error(error.message);
+		return res.status(400).json({
+			message: error.message,
+		});
+	}
+};
+
+export { getAll, getById, follow, unfollow, getFollowed, stripePayment };

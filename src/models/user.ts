@@ -15,6 +15,8 @@ interface IUser {
 	password: string;
 	userRole?: roles;
 	deleted?: boolean;
+	paid?: boolean;
+	paymentIntentId?: string;
 	posts?: mongoose.Types.ObjectId[];
 	followedUsers?: mongoose.Types.ObjectId[];
 	tokens?: string[];
@@ -49,6 +51,15 @@ const userSchema: mongoose.Schema<IUser> = new mongoose.Schema(
 		deleted: {
 			type: Boolean,
 			default: false,
+		},
+		paid: {
+			type: Boolean,
+			default: false,
+		},
+		paymentIntentId: {
+			type: String,
+			required: false,
+			trim: true,
 		},
 		tokens: [
 			{

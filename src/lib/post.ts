@@ -156,6 +156,11 @@ const allPostsByUser = async (req: IGetUserAuthRequest, res: Response) => {
 const feed = async (req: IGetUserAuthRequest, res: Response) => {
 	const { page = 1, limit = 10 } = req.query;
 	const { user } = req;
+	if (!user.paid) {
+		return res.status(401).json({
+			message: 'Please upgrade your account to see the feed.',
+		});
+	}
 	try {
 		//get posts of all users that the user is following
 		const following = user.followedUsers;
