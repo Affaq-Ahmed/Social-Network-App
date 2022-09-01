@@ -6,6 +6,7 @@ import {
 	update,
 	remove,
 	allPostsByUser,
+	feed,
 } from '../lib/post';
 
 const getAllPosts = async (req: Request, res: Response) => {
@@ -32,6 +33,10 @@ const getAllPostsByUser = async (req: Request, res: Response) => {
 	const response = await allPostsByUser(req, res);
 };
 
+const getFeed = async (req: Request, res: Response) => {
+	const response = await feed(req, res);
+};
+
 export {
 	getAllPosts,
 	getPost,
@@ -39,4 +44,5 @@ export {
 	updatePost,
 	deletePost,
 	getAllPostsByUser,
+	getFeed,
 };

@@ -153,4 +153,27 @@ const allPostsByUser = async (req: IGetUserAuthRequest, res: Response) => {
 	}
 };
 
-export { getAll, getById, create, update, remove, allPostsByUser };
+const feed = async (req: IGetUserAuthRequest, res: Response) => {
+	const { page = 1, limit = 10 } = req.query;
+	const { user } = req;
+	try {
+		//get posts of all users that the user is following
+		const following = user.followedUsers;
+		const posts = await Post.find({ createdBy: { $in: following } })
+			.skip(((page as number) - 1) * (limit as number))
+			.limit(limit as number)
+			.sort({ createdAt: -1 });
+		logger.info('Posts found');
+		return res.status(200).json({
+			message: 'Posts found',
+			posts,
+		});
+	} catch (error: any) {
+		logger.error(error.message);
+		return res.status(400).json({
+			message: error.message,
+		});
+	}
+};
+
+export { getAll, getById, create, update, remove, allPostsByUser, feed };

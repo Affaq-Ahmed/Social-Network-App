@@ -6,6 +6,7 @@ import {
 	updatePost,
 	deletePost,
 	getAllPostsByUser,
+	getFeed,
 } from '../controllers/post';
 import { authenticateToken } from '../middleware/auth';
 import { createPostValidator, updatePostValidator } from '../validators/post';
@@ -23,5 +24,7 @@ router.patch('/:id', authenticateToken, updatePostValidator, updatePost);
 router.delete('/:id', authenticateToken, deletePost);
 
 router.get('/user/:id', getAllPostsByUser);
+
+router.get('/feed', authenticateToken, getFeed);
 
 export default router;
