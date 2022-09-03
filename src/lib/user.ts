@@ -130,14 +130,15 @@ const getFollowed = async (req: IGetUserAuthRequest, res: Response) => {
 
 const stripePayment = async (req: IGetUserAuthRequest, res: Response) => {
 	const { user } = req;
+	const { card_number, exp_month, exp_year, cvc } = req.body;
 	try {
 		const paymentMethod = await stripe.paymentMethods.create({
 			type: 'card',
 			card: {
-				number: '4242424242424242',
-				exp_month: 12,
-				exp_year: 2030,
-				cvc: '123',
+				number: card_number,
+				exp_month: exp_month,
+				exp_year: exp_year,
+				cvc: cvc,
 			},
 		});
 		const paymentIntent = await stripe.paymentIntents.create({
