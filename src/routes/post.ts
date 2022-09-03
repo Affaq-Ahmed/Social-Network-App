@@ -13,9 +13,9 @@ import { createPostValidator, updatePostValidator } from '../validators/post';
 
 export const router = Router();
 
-router.get('/', getAllPosts);
+router.get('/', authenticateToken, getAllPosts);
 
-router.get('/:id', getPost);
+router.get('/:id', authenticateToken, getPost);
 
 router.post('/', authenticateToken, createPostValidator, createPost);
 

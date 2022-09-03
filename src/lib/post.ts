@@ -6,11 +6,21 @@ import { IGetUserAuthRequest } from '../types/Request';
 const getAll = async (req: IGetUserAuthRequest, res: Response) => {
 	const { page = 1, limit = 10 } = req.query;
 	try {
-		const posts = await Post.find({})
-			.skip(((page as number) - 1) * (limit as number))
-			.limit(limit as number)
-			.populate('author', '-password')
-			.sort({ createdAt: -1 });
+		let posts;
+		if (req.user.role === 'MODERATOR') {
+			//REMOVE ALL USER INFO FROM POST
+			posts = await Post.find({})
+				.skip(((page as number) - 1) * (limit as number))
+				.limit(limit as number)
+				.sort({ createdAt: -1 })
+				.select('-createdBy');
+		} else {
+			posts = await Post.find({})
+				.skip(((page as number) - 1) * (limit as number))
+				.limit(limit as number)
+				.populate('author', '-password')
+				.sort({ createdAt: -1 });
+		}
 		logger.info('Posts found');
 		return res.status(200).json({
 			message: 'Posts found',

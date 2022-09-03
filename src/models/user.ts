@@ -3,7 +3,6 @@ import * as jwt from 'jsonwebtoken';
 import MongooseDelete from 'mongoose-delete';
 
 enum roles {
-	ADMIN = 'ADMIN',
 	USER = 'USER',
 	MODERATOR = 'MODERATOR',
 }
