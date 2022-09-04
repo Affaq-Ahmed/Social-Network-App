@@ -155,10 +155,6 @@ const allPostsByUser = async (req: IGetUserAuthRequest, res: Response) => {
 				sort: { createdAt: desc === 'true' ? -1 : 1 },
 			}
 		);
-		// const posts = await Post.find({ createdBy: user._id })
-		// 	.skip(((page as number) - 1) * (limit as number))
-		// 	.limit(limit as number)
-		// 	.sort({ createdAt: -1 });
 		logger.info('Posts found');
 		return res.status(200).json({
 			message: 'Posts found',
