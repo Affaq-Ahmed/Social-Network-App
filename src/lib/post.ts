@@ -143,13 +143,22 @@ const remove = async (req: IGetUserAuthRequest, res: Response) => {
 
 //pagination
 const allPostsByUser = async (req: IGetUserAuthRequest, res: Response) => {
-	const { page = 1, limit = 10 } = req.query;
+	const { page = 1, limit = 10, desc = true } = req.query;
 	const { user } = req;
 	try {
-		const posts = await Post.find({ createdBy: user._id })
-			.skip(((page as number) - 1) * (limit as number))
-			.limit(limit as number)
-			.sort({ createdAt: -1 });
+		const posts = await Post.paginate(
+			{ createdBy: user._id },
+			{
+				page: page as number,
+				limit: limit as number,
+				populate: 'author',
+				sort: { createdAt: desc === 'true' ? -1 : 1 },
+			}
+		);
+		// const posts = await Post.find({ createdBy: user._id })
+		// 	.skip(((page as number) - 1) * (limit as number))
+		// 	.limit(limit as number)
+		// 	.sort({ createdAt: -1 });
 		logger.info('Posts found');
 		return res.status(200).json({
 			message: 'Posts found',
