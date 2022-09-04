@@ -133,7 +133,7 @@ const remove = async (req: IGetUserAuthRequest, res: Response) => {
 
 //pagination
 const allPostsByUser = async (req: IGetUserAuthRequest, res: Response) => {
-	const { page = 1, limit = 10 } = req.query;
+	const { page = 1, limit = 10, desc = true } = req.query;
 	const { user } = req;
 	try {
 		const posts = await Post.paginate(
@@ -142,7 +142,7 @@ const allPostsByUser = async (req: IGetUserAuthRequest, res: Response) => {
 				page: page as number,
 				limit: limit as number,
 				populate: 'author',
-				sort: { createdAt: -1 },
+				sort: { createdAt: desc === 'true' ? -1 : 1 },
 			}
 		);
 		// const posts = await Post.find({ createdBy: user._id })
