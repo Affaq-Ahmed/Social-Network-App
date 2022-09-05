@@ -77,7 +77,7 @@ const userSchema: mongoose.Schema<IUser> = new mongoose.Schema(
 		followedUsers: [
 			{
 				type: mongoose.Schema.Types.ObjectId,
-				ref: 'User',
+
 				default: [],
 			},
 		],
@@ -96,7 +96,8 @@ userSchema.methods.publicProfile = function () {
 userSchema.methods.generateAuthToken = function () {
 	const token = jwt.sign(
 		{ _id: this._id.toString(), userRole: this.userRole },
-		process.env.JWT_SECRET as string
+		process.env.JWT_SECRET as string,
+		{ expiresIn: '1h' }
 	);
 	this.tokens = this.tokens.concat({ token });
 	return this.save().then(() => token);

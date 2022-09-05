@@ -26,6 +26,13 @@ app.use(express.urlencoded({ extended: true }));
 gatherRoutes(app);
 mongoConnection();
 
-app.listen(PORT, (): void => {
+const server = app.listen(PORT, (): void => {
 	logger.info(`Server listening on port ${PORT}`);
+});
+
+import socket from './startup/socket';
+const io = socket.init(server);
+
+io.on('connection', () => {
+	console.log('a user connected');
 });

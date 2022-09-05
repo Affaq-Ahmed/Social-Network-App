@@ -47,6 +47,7 @@
 		"mongoose-paginate": "^5.0.3",
 		"mongoose-paginate-v2": "^1.7.0",
 		"rimraf": "^3.0.2",
+		"socket.io": "^4.5.2",
 		"stripe": "^10.7.0",
 		"winston": "^3.8.1"
 	}

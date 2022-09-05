@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Post } from '../models/post';
 import { logger } from '../middleware/logger';
 import { IGetUserAuthRequest } from '../types/Request';
+import io from '../startup/socket';
 
 const getAll = async (req: IGetUserAuthRequest, res: Response) => {
 	const { page = 1, limit = 10 } = req.query;
@@ -18,8 +19,10 @@ const getAll = async (req: IGetUserAuthRequest, res: Response) => {
 			posts = await Post.find({})
 				.skip(((page as number) - 1) * (limit as number))
 				.limit(limit as number)
-				.populate('author', '-password')
-				.sort({ createdAt: -1 });
+				.populate('createdBy', '-password -tokens')
+				.sort({ createdAt: -1 })
+				.where('deleted')
+				.equals(false);
 		}
 		logger.info('Posts found');
 		return res.status(200).json({
@@ -35,9 +38,12 @@ const getAll = async (req: IGetUserAuthRequest, res: Response) => {
 };
 
 const getById = async (req: IGetUserAuthRequest, res: Response) => {
-	const { postId } = req.params;
+	const { id } = req.params;
 	try {
-		const post = await Post.findById(postId).populate('author', '-password');
+		const post = await Post.findById(id).populate(
+			'createdBy',
+			'-password -tokens'
+		);
 		logger.info('Post found');
 		return res.status(200).json({
 			message: 'Post found',
@@ -62,6 +68,7 @@ const create = async (req: IGetUserAuthRequest, res: Response) => {
 			createdAt: new Date().toISOString(),
 		});
 		const savedPost = await post.save();
+		io.getIO().emit('posts', { action: 'create', post: savedPost });
 		logger.info('Post created');
 		return res.status(201).json({
 			message: 'Post created',
@@ -76,10 +83,10 @@ const create = async (req: IGetUserAuthRequest, res: Response) => {
 };
 
 const update = async (req: IGetUserAuthRequest, res: Response) => {
-	const { postId } = req.params;
+	const { id } = req.params;
 	const { title, content } = req.body;
 	try {
-		const post = await Post.findById(postId);
+		const post = await Post.findById(id);
 		if (!post) {
 			logger.info('Post not found');
 			return res.status(400).json({
@@ -113,9 +120,9 @@ const update = async (req: IGetUserAuthRequest, res: Response) => {
 };
 
 const remove = async (req: IGetUserAuthRequest, res: Response) => {
-	const { postId } = req.params;
+	const { id } = req.params;
 	try {
-		const post = await Post.findById(postId);
+		const post = await Post.findById(id);
 		if (!post) {
 			logger.info('Post not found');
 			return res.status(400).json({
@@ -169,7 +176,7 @@ const allPostsByUser = async (req: IGetUserAuthRequest, res: Response) => {
 };
 
 const feed = async (req: IGetUserAuthRequest, res: Response) => {
-	const { page = 1, limit = 10 } = req.query;
+	const { page = 1, limit = 10, desc = true } = req.query;
 	const { user } = req;
 	if (!user.paid) {
 		return res.status(401).json({
@@ -177,13 +184,16 @@ const feed = async (req: IGetUserAuthRequest, res: Response) => {
 		});
 	}
 	try {
-		//get posts of all users that the user is following
-		const following = user.followedUsers;
-		const posts = await Post.find({ createdBy: { $in: following } })
-			.skip(((page as number) - 1) * (limit as number))
-			.limit(limit as number)
-			.sort({ createdAt: -1 });
+		const posts = await Post.paginate(
+			{ createdBy: { $in: user.followedUsers } },
+			{
+				page: page as number,
+				limit: limit as number,
+				sort: { createdAt: desc === 'true' ? -1 : 1 },
+			}
+		);
 		logger.info('Posts found');
+
 		return res.status(200).json({
 			message: 'Posts found',
 			posts,

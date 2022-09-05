@@ -15,6 +15,8 @@ export const router = Router();
 
 router.get('/', authenticateToken, getAllPosts);
 
+router.get('/feed', authenticateToken, getFeed);
+
 router.get('/:id', authenticateToken, getPost);
 
 router.post('/', authenticateToken, createPostValidator, createPost);
@@ -24,7 +26,5 @@ router.patch('/:id', authenticateToken, updatePostValidator, updatePost);
 router.delete('/:id', authenticateToken, deletePost);
 
 router.get('/user/:id', getAllPostsByUser);
-
-router.get('/feed', authenticateToken, getFeed);
 
 export default router;

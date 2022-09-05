@@ -9,8 +9,8 @@ const postCreate = joi.object<IPost>({
 
 const postUpdate = joi
 	.object<IPost>({
-		title: joi.string().required(),
-		content: joi.string().required(),
+		title: joi.string(),
+		content: joi.string(),
 	})
 	.or('title', 'content');
 

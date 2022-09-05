@@ -5,9 +5,12 @@ import { logger } from '../middleware/logger';
 import { IGetUserAuthRequest } from '../types/Request';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-	apiVersion: '2022-08-01',
-});
+const stripe = new Stripe(
+	'sk_test_51LdAPlL8VPhpvdNPlK02H7pYxQT1NYeST0o2NzSszUMGdKthlx4IRbg0o4F4nMZdSJ2ZXoq2FiZeToyo9dF2DEp600OcjMmXrg',
+	{
+		apiVersion: '2022-08-01',
+	}
+);
 
 //pagination
 const getAll = async (req: IGetUserAuthRequest, res: Response) => {
@@ -48,17 +51,17 @@ const getById = async (req: IGetUserAuthRequest, res: Response) => {
 };
 
 const follow = async (req: IGetUserAuthRequest, res: Response) => {
-	const { userId } = req.params;
+	const { id } = req.params;
 	const { user } = req;
 	try {
-		const userToFollow = await User.findById(userId);
+		const userToFollow = await User.findById(id);
 		if (!userToFollow) {
 			logger.info('User not found');
 			return res.status(400).json({
 				message: 'User not found',
 			});
 		}
-		if (user.followedUsers.includes(userToFollow)) {
+		if (user.followedUsers.includes(userToFollow._id)) {
 			logger.info('User already followed');
 			return res.status(400).json({
 				message: 'User already followed',
@@ -80,17 +83,17 @@ const follow = async (req: IGetUserAuthRequest, res: Response) => {
 };
 
 const unfollow = async (req: IGetUserAuthRequest, res: Response) => {
-	const { userId } = req.params;
+	const { id } = req.params;
 	const { user } = req;
 	try {
-		const userToUnfollow = await User.findById(userId);
+		const userToUnfollow = await User.findById(id);
 		if (!userToUnfollow) {
 			logger.info('User not found');
 			return res.status(400).json({
 				message: 'User not found',
 			});
 		}
-		if (user.followedUsers.includes(userToUnfollow)) {
+		if (user.followedUsers.includes(userToUnfollow._id)) {
 			user.followedUsers.pull(userToUnfollow);
 		} else {
 			logger.info('User not followed');
