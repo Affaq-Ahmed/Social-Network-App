@@ -12,7 +12,11 @@ const stripe = new Stripe(
 	}
 );
 
-//pagination
+/**
+ * @desc   Get all users
+ * @route  GET /users
+ * @access Public
+ */
 const getAll = async (req: IGetUserAuthRequest, res: Response) => {
 	const { page = 1, limit = 10 } = req.query;
 	try {
@@ -33,6 +37,14 @@ const getAll = async (req: IGetUserAuthRequest, res: Response) => {
 	}
 };
 
+/**
+ * @desc   Get user by id
+ * @route  GET /users/:id
+ * @access Public
+ * @param  {string} id
+ * @returns {IUser}
+ * @throws {Error}
+ */
 const getById = async (req: IGetUserAuthRequest, res: Response) => {
 	const { userId } = req.params;
 	try {
@@ -50,6 +62,13 @@ const getById = async (req: IGetUserAuthRequest, res: Response) => {
 	}
 };
 
+/**
+ * @desc Follow user
+ * @route POST /user/follow/:id
+ * @access Private
+ * @param {string} id
+ * @returns {IUser}
+ */
 const follow = async (req: IGetUserAuthRequest, res: Response) => {
 	const { id } = req.params;
 	const { user } = req;
@@ -82,6 +101,13 @@ const follow = async (req: IGetUserAuthRequest, res: Response) => {
 	}
 };
 
+/**
+ * @desc Unfollow user
+ * @route POST /user/unfollow/:id
+ * @access Private
+ * @param {string} id
+ * @returns {IUser}
+ */
 const unfollow = async (req: IGetUserAuthRequest, res: Response) => {
 	const { id } = req.params;
 	const { user } = req;
@@ -115,6 +141,12 @@ const unfollow = async (req: IGetUserAuthRequest, res: Response) => {
 	}
 };
 
+/**
+ * @desc Get followed users
+ * @route GET /user/followed
+ * @access Private
+ * @returns {IUser[]}
+ */
 const getFollowed = async (req: IGetUserAuthRequest, res: Response) => {
 	const { user } = req;
 	try {
@@ -132,6 +164,18 @@ const getFollowed = async (req: IGetUserAuthRequest, res: Response) => {
 	}
 };
 
+/**
+ * @desc Payment through Stripe
+ * @route POST /user/payment
+ * @access Private
+ * @Body {cardNumber, expMonth, expYear, cvc}
+ * @returns {IUser}
+ * @throws {StripeError}
+ * @throws {Error}
+ * This is a test payment, so the card number is 4242 4242 4242 4242
+ * and the cvc is 123
+ * @see https://stripe.com/docs/testing
+ */
 const stripePayment = async (req: IGetUserAuthRequest, res: Response) => {
 	const { user } = req;
 	const { card_number, exp_month, exp_year, cvc } = req.body;

@@ -2,7 +2,12 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import helmet from 'helmet';
-
+/**
+ * @description
+ * This is the main entry point of the application.
+ * It is responsible for setting up the application
+ * and starting the server.
+ */
 import { logger } from './middleware/logger/index';
 
 import { dotEnv } from './startup/dotenv';

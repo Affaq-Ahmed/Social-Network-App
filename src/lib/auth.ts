@@ -4,6 +4,15 @@ import bcrypt from 'bcrypt';
 import { logger } from '../middleware/logger';
 import { IGetUserAuthRequest } from '../types/Request';
 
+/**
+ * @param req Request
+ * @param res Response
+ * @returns {Promise<Response>}
+ * @description Login user
+ * @route POST /users/login
+ * @access Public
+ * @example http://localhost:3000/users/login
+ */
 const userLogin = async (req: IGetUserAuthRequest, res: Response) => {
 	const { email, password } = req.body;
 	try {
@@ -36,6 +45,15 @@ const userLogin = async (req: IGetUserAuthRequest, res: Response) => {
 	}
 };
 
+/**
+ * @param req Request
+ * @param res Response
+ * @returns {Promise<Response>}
+ * @description Register user
+ * @route POST /users/register
+ * @access Public
+ * @example http://localhost:3000/users/register
+ */
 const userSignup = async (req: IGetUserAuthRequest, res: Response) => {
 	const { name, email, password } = req.body;
 	let role;
@@ -74,6 +92,15 @@ const userSignup = async (req: IGetUserAuthRequest, res: Response) => {
 	}
 };
 
+/**
+ * @param req Request
+ * @param res Response
+ * @returns {Promise<Response>}
+ * @description Logout user
+ * @route POST /users/logout
+ * @access Private
+ * @example http://localhost:3000/users/logout
+ */
 const userLogout = async (req: IGetUserAuthRequest, res: Response) => {
 	try {
 		await req.user.removeToken(req.token);

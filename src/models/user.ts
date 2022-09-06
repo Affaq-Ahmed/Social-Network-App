@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import * as jwt from 'jsonwebtoken';
+import { sign } from '../util/jwt';
 import MongooseDelete from 'mongoose-delete';
 
 enum roles {
@@ -87,22 +87,37 @@ const userSchema: mongoose.Schema<IUser> = new mongoose.Schema(
 	}
 );
 
+/**
+ * @returns {Object} - Returns a public profile of the user
+ */
 userSchema.methods.publicProfile = function () {
 	const user = this.toObject();
 	delete user.password;
 	return user;
 };
 
-userSchema.methods.generateAuthToken = function () {
-	const token = jwt.sign(
-		{ _id: this._id.toString(), userRole: this.userRole },
+/**
+ *
+ * @returns {Object} - Returns a token for the user
+ */
+userSchema.methods.generateAuthToken = async function () {
+	const option = {
+		expiresIn: '1h',
+	};
+	const token = await sign(
+		{ _id: this._id, userRole: this.userRole },
 		process.env.JWT_SECRET as string,
-		{ expiresIn: '1h' }
+		option
 	);
 	this.tokens = this.tokens.concat({ token });
 	return this.save().then(() => token);
 };
 
+/**
+ *
+ * @param token - Token to be removed
+ * @returns {Object} - Returns the user
+ */
 userSchema.methods.removeToken = function (token: string) {
 	this.tokens = this.tokens.filter((t: any) => t.token !== token);
 	return this.save();

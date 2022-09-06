@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 
+// Language: typescript
+// Path: src/startup/database.ts
 function mongoConnection() {
 	mongoose
 		.connect(
