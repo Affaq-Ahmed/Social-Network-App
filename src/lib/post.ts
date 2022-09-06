@@ -60,6 +60,11 @@ const getById = async (req: IGetUserAuthRequest, res: Response) => {
 const create = async (req: IGetUserAuthRequest, res: Response) => {
 	const { title, content } = req.body;
 	const { user } = req;
+	if (req.user.role === 'MODERATOR') {
+		return res.status(403).json({
+			message: 'Moderators cannot create posts',
+		});
+	}
 	try {
 		const post = new Post({
 			title,
@@ -93,7 +98,7 @@ const update = async (req: IGetUserAuthRequest, res: Response) => {
 				message: 'Post not found',
 			});
 		}
-		if (post.createdBy.toString() !== req.user._id.toString()) {
+		if (post.createdBy.toString() !== req.user._id.toString() || post.deleted) {
 			logger.info('Unauthorized');
 			return res.status(401).json({
 				message: 'Unauthorized',
@@ -129,7 +134,10 @@ const remove = async (req: IGetUserAuthRequest, res: Response) => {
 				message: 'Post not found',
 			});
 		}
-		if (post.createdBy.toString() !== req.user._id.toString()) {
+		if (
+			post.createdBy.toString() !== req.user._id.toString() ||
+			req.user.userRole !== 'MODERATOR'
+		) {
 			logger.info('Unauthorized');
 			return res.status(401).json({
 				message: 'Unauthorized',
