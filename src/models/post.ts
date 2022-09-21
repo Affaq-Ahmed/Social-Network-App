@@ -10,6 +10,8 @@ interface IPost {
 	createdBy: mongoose.Types.ObjectId;
 	commentCount?: number;
 	comments?: mongoose.Types.ObjectId[];
+	likes?: mongoose.Types.ObjectId[];
+	likesCount?: number;
 	deleted?: boolean;
 	createdAt: Date;
 	updatedAt: Date;
@@ -43,6 +45,17 @@ const postSchema: mongoose.Schema<IPost> = new mongoose.Schema(
 				default: [],
 			},
 		],
+		likes: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: 'User',
+				default: [],
+			},
+		],
+		likesCount: {
+			type: Number,
+			default: 0,
+		},
 		deleted: {
 			type: Boolean,
 			default: false,

@@ -78,3 +78,5 @@ router.get('/replies/:commentId', authenticateToken, getCommentReplies);
  * @returns {string} console.error
  */
 router.get('/:postId', authenticateToken, getPostComments);
+
+export default router;

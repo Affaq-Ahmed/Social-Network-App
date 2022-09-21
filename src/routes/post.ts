@@ -7,6 +7,8 @@ import {
 	deletePost,
 	getAllPostsByUser,
 	getFeed,
+	likePost,
+	unlikePost,
 } from '../controllers/post';
 import { authenticateToken } from '../middleware/auth';
 import { createPostValidator, updatePostValidator } from '../validators/post';
@@ -36,6 +38,28 @@ router.get('/', authenticateToken, getAllPosts);
  * @returns {string} message
  */
 router.get('/feed', authenticateToken, getFeed);
+
+/**
+ * @route POST /post/like/:postId
+ * @desc Like a post
+ * @access Private
+ * @Param postId
+ * @returns {object} post object
+ * @returns {string} message
+ * @returns {string} error
+ */
+router.post('/like/:postId', authenticateToken, likePost);
+
+/**
+ * @route POST /post/unlike/:postId
+ * @desc Unlike a post
+ * @access Private
+ * @Param postId
+ * @returns {object} post object
+ * @returns {string} message
+ * @returns {string} error
+ */
+router.post('/unlike/:postId', authenticateToken, unlikePost);
 
 /**
  * @route GET /post/:id

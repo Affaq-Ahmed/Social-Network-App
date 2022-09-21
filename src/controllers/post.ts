@@ -7,6 +7,8 @@ import {
 	remove,
 	allPostsByUser,
 	feed,
+	like,
+	unlike,
 } from '../lib/post';
 
 const getAllPosts = async (req: Request, res: Response) => {
@@ -37,6 +39,14 @@ const getFeed = async (req: Request, res: Response) => {
 	const response = await feed(req, res);
 };
 
+const likePost = async (req: Request, res: Response) => {
+	const response = await like(req, res);
+};
+
+const unlikePost = async (req: Request, res: Response) => {
+	const response = await unlike(req, res);
+};
+
 export {
 	getAllPosts,
 	getPost,
@@ -45,4 +55,6 @@ export {
 	deletePost,
 	getAllPostsByUser,
 	getFeed,
+	likePost,
+	unlikePost,
 };

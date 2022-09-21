@@ -263,6 +263,86 @@ const feed = async (req: IGetUserAuthRequest, res: Response) => {
 };
 
 /**
+ * @desc Like a post
+ * @route PUT /post/like/:id
+ * @access Authenticated
+ * @Param postId
+ * @access Moderator can't like post
+ * @access User can't like post if he has no friends
+ */
+const like = async (req: IGetUserAuthRequest, res: Response) => {
+	const { postId } = req.params;
+	const { user } = req;
+	try {
+		const post = await Post.findById(postId);
+		if (!post) {
+			logger.info('Post not found');
+			return res.status(400).json({
+				message: 'Post not found',
+			});
+		}
+		if (post.likes?.includes(user._id)) {
+			logger.info('Post already liked');
+			return res.status(400).json({
+				message: 'Post already liked',
+			});
+		}
+		post.likes?.push(user._id);
+		const savedPost = await post.save();
+		logger.info('Post liked');
+		return res.status(200).json({
+			message: 'Post liked',
+			post: savedPost,
+		});
+	} catch (error: any) {
+		logger.error(error.message);
+		return res.status(400).json({
+			message: error.message,
+		});
+	}
+};
+
+/**
+ * @desc Unlike a post
+ * @route PUT /post/unlike/:id
+ * @access Authenticated
+ * @Param postId
+ * @access Moderator can't unlike post
+ * @access User can't unlike post if he has no friends
+ */
+const unlike = async (req: IGetUserAuthRequest, res: Response) => {
+	const { postId } = req.params;
+	const { user } = req;
+	try {
+		const post = await Post.findById(postId);
+		if (!post) {
+			logger.info('Post not found');
+			return res.status(400).json({
+				message: 'Post not found',
+			});
+		}
+		if (!post.likes?.includes(user._id)) {
+			logger.info('Post not liked');
+			return res.status(400).json({
+				message: 'Post not liked',
+			});
+		}
+		post.likes = post.likes?.filter((like) => like !== user._id);
+		const savedPost = await post.save();
+		logger.info('Post unliked');
+		return res.status(200).json({
+			message: 'Post unliked',
+			post: savedPost,
+		});
+	} catch (error: any) {
+		logger.error(error.message);
+		return res.status(400).json({
+			message: error.message,
+		});
+	}
+};
+
+/**
  * @desc Get all comments with replies in graph format
  * @route GET /post/:id/comments
  * @access Authenticated
@@ -347,4 +427,15 @@ const getComments = async (req: IGetUserAuthRequest, res: Response) => {
 	}
 };
 
-export { getAll, getById, create, update, remove, allPostsByUser, feed };
+export {
+	getAll,
+	getById,
+	create,
+	update,
+	remove,
+	allPostsByUser,
+	feed,
+	like,
+	unlike,
+	getComments,
+};
