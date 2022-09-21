@@ -3,6 +3,7 @@ import { Post } from '../models/post';
 import { logger } from '../middleware/logger';
 import { IGetUserAuthRequest } from '../types/Request';
 import io from '../startup/socket';
+import { Comment } from '../models/comment';
 
 /**
  * @desc Get all posts
@@ -25,7 +26,7 @@ const getAll = async (req: IGetUserAuthRequest, res: Response) => {
 			posts = await Post.find({})
 				.skip(((page as number) - 1) * (limit as number))
 				.limit(limit as number)
-				.populate('createdBy', '-password -tokens')
+				.populate('createdBy', 'name email')
 				.sort({ createdAt: -1 })
 				.where('deleted')
 				.equals(false);
@@ -53,10 +54,7 @@ const getAll = async (req: IGetUserAuthRequest, res: Response) => {
 const getById = async (req: IGetUserAuthRequest, res: Response) => {
 	const { id } = req.params;
 	try {
-		const post = await Post.findById(id).populate(
-			'createdBy',
-			'-password -tokens'
-		);
+		const post = await Post.findById(id).populate('createdBy', 'name email');
 		logger.info('Post found');
 		return res.status(200).json({
 			message: 'Post found',
@@ -207,7 +205,7 @@ const allPostsByUser = async (req: IGetUserAuthRequest, res: Response) => {
 			{
 				page: page as number,
 				limit: limit as number,
-				populate: 'author',
+				populate: 'createdBy',
 				sort: { createdAt: desc === 'true' ? -1 : 1 },
 			}
 		);
@@ -231,7 +229,7 @@ const allPostsByUser = async (req: IGetUserAuthRequest, res: Response) => {
  * @Query page, limit, desc
  * @access Moderator can't get feed
  * @access User can't get getFeed if he has no friends
- * 
+ *
  */
 const feed = async (req: IGetUserAuthRequest, res: Response) => {
 	const { page = 1, limit = 10, desc = true } = req.query;
@@ -255,6 +253,91 @@ const feed = async (req: IGetUserAuthRequest, res: Response) => {
 		return res.status(200).json({
 			message: 'Posts found',
 			posts,
+		});
+	} catch (error: any) {
+		logger.error(error.message);
+		return res.status(400).json({
+			message: error.message,
+		});
+	}
+};
+
+/**
+ * @desc Get all comments with replies in graph format
+ * @route GET /post/:id/comments
+ * @access Authenticated
+ * @Param id
+ * @Query page, limit, desc
+ * @access Moderator can't get comments
+ * @access User can't get comments if post is deleted
+ * @access User can't get comments if post is not his and he is not following the user
+ */
+const getComments = async (req: IGetUserAuthRequest, res: Response) => {
+	const { id } = req.params;
+	const { user } = req;
+	try {
+		const post = await Post.findById(id);
+		if (!post) {
+			logger.info('Post not found');
+			return res.status(400).json({
+				message: 'Post not found',
+			});
+		}
+		if (post.deleted) {
+			logger.info('Post is deleted');
+			return res.status(400).json({
+				message: 'Post is deleted',
+			});
+		}
+		if (
+			post.createdBy.toString() !== user._id.toString() &&
+			!user.followedUsers.includes(post.createdBy)
+		) {
+			logger.info('Unauthorized');
+			return res.status(401).json({
+				message: 'Unauthorized',
+			});
+		}
+		const comments = await Comment.find({ postId: id })
+			.where('replyTo')
+			.equals(null);
+
+		// const commentsWithReplies = await Promise.all(
+		// 	comments.map(async (comment) => {
+		// 		const replies = await Comment.find({ parentCommentId: comment._id });
+		// 		return {
+		// 			...comment.toObject(),
+		// 			replies,
+		// 		};
+		// 	})
+		// );
+
+		//loop through comments and add replies to each comment and add replies to each reply and so on
+		const commentsWithReplies = await Promise.all(
+			comments.map(async (comment) => {
+				const replies = await Comment.find({ parentCommentId: comment._id });
+				const repliesWithReplies = await Promise.all(
+					replies.map(async (reply) => {
+						const replies = await Comment.find({
+							parentCommentId: reply._id,
+						});
+						return {
+							...reply.toObject(),
+							replies,
+						};
+					})
+				);
+				return {
+					...comment.toObject(),
+					replies: repliesWithReplies,
+				};
+			})
+		);
+
+		logger.info('Comments found');
+		return res.status(200).json({
+			message: 'Comments found',
+			commentsWithReplies,
 		});
 	} catch (error: any) {
 		logger.error(error.message);
