@@ -157,8 +157,6 @@ export const createReply = async (req: IGetUserAuthRequest, res: Response) => {
 		});
 		const createdReply = await reply.save();
 
-		await comment.save();
-
 		logger.info('Reply created');
 		return res.status(201).json({
 			message: 'Reply created',
@@ -187,12 +185,10 @@ export const commentReplies = async (
 ) => {
 	const { commentId } = req.params;
 	try {
-		const replies = await Comment.find()
-			.where('parentCommentId')
-			.equals(commentId)
-			.where('deleted')
-			.equals(false)
-			.populate('createdBy', 'name email _id');
+		const replies = await Comment.find({
+			parentCommentId: commentId,
+			deleted: false,
+		}).populate('createdBy', 'name email _id');
 		logger.info('Replies found');
 		return res.status(200).json({
 			message: 'Replies found',

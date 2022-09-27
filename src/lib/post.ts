@@ -288,6 +288,7 @@ const like = async (req: IGetUserAuthRequest, res: Response) => {
 			});
 		}
 		post.likes?.push(user._id);
+		post.likesCount = post.likes?.length;
 		const savedPost = await post.save();
 		logger.info('Post liked');
 		return res.status(200).json({
@@ -328,6 +329,7 @@ const unlike = async (req: IGetUserAuthRequest, res: Response) => {
 			});
 		}
 		post.likes = post.likes?.filter((like) => like !== user._id);
+		post.likesCount = post.likes?.length;
 		const savedPost = await post.save();
 		logger.info('Post unliked');
 		return res.status(200).json({
@@ -379,45 +381,27 @@ const getComments = async (req: IGetUserAuthRequest, res: Response) => {
 			});
 		}
 		const comments = await Comment.find({ postId: id })
-			.where('replyTo')
-			.equals(null);
+			.where('deleted')
+			.equals(false);
 
-		// const commentsWithReplies = await Promise.all(
-		// 	comments.map(async (comment) => {
-		// 		const replies = await Comment.find({ parentCommentId: comment._id });
-		// 		return {
-		// 			...comment.toObject(),
-		// 			replies,
-		// 		};
-		// 	})
-		// );
+		const graph = comments.reduce((acc: any, comment: any) => {
+			acc[comment._id] = {
+				...comment._doc,
+				replies: [],
+			};
+			return acc;
+		}, {});
 
-		//loop through comments and add replies to each comment and add replies to each reply and so on
-		const commentsWithReplies = await Promise.all(
-			comments.map(async (comment) => {
-				const replies = await Comment.find({ parentCommentId: comment._id });
-				const repliesWithReplies = await Promise.all(
-					replies.map(async (reply) => {
-						const replies = await Comment.find({
-							parentCommentId: reply._id,
-						});
-						return {
-							...reply.toObject(),
-							replies,
-						};
-					})
-				);
-				return {
-					...comment.toObject(),
-					replies: repliesWithReplies,
-				};
-			})
-		);
+		graph.forEach((comment: { replyTo: string | number }) => {
+			if (comment.replyTo) {
+				graph[comment.replyTo].replies.push(comment);
+			}
+		});
 
 		logger.info('Comments found');
 		return res.status(200).json({
 			message: 'Comments found',
-			commentsWithReplies,
+			graph,
 		});
 	} catch (error: any) {
 		logger.error(error.message);

@@ -9,6 +9,7 @@ import {
 	getFeed,
 	likePost,
 	unlikePost,
+	getPostComments,
 } from '../controllers/post';
 import { authenticateToken } from '../middleware/auth';
 import { createPostValidator, updatePostValidator } from '../validators/post';
@@ -60,6 +61,17 @@ router.post('/like/:postId', authenticateToken, likePost);
  * @returns {string} error
  */
 router.post('/unlike/:postId', authenticateToken, unlikePost);
+
+/**
+ * @route GET /post/comments/:id
+ * @desc Get all comments of a post in a graph
+ * @access Private
+ * @Param id
+ * @returns {object} post object
+ * @returns {string} message
+ * @returns {string} error
+ */
+router.get('/comments/:id', authenticateToken, getPostComments);
 
 /**
  * @route GET /post/:id

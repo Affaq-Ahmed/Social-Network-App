@@ -9,6 +9,7 @@ import {
 	feed,
 	like,
 	unlike,
+	getComments
 } from '../lib/post';
 
 const getAllPosts = async (req: Request, res: Response) => {
@@ -47,6 +48,10 @@ const unlikePost = async (req: Request, res: Response) => {
 	const response = await unlike(req, res);
 };
 
+const getPostComments = async (req: Request, res: Response) => {
+	const response = await getComments(req, res);
+};
+
 export {
 	getAllPosts,
 	getPost,
@@ -57,4 +62,5 @@ export {
 	getFeed,
 	likePost,
 	unlikePost,
+	getPostComments
 };
