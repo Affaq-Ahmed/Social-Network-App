@@ -57,13 +57,11 @@ export const create = async (req: IGetUserAuthRequest, res: Response) => {
 export const postComments = async (req: IGetUserAuthRequest, res: Response) => {
 	const { postId } = req.params;
 	try {
-		const comments = await Comment.find()
-			.where('postId')
-			.equals(postId)
-			.where('deleted')
-			.equals(false)
-			.populate('createdBy', 'name email _id')
-			.populate('replies', 'content createdBy _id createdAt');
+		const comments = await Comment.find({
+			postId,
+			deleted: false,
+		}).populate('createdBy', 'name email _id');
+
 		logger.info('Comments found');
 		return res.status(200).json({
 			message: 'Comments found',

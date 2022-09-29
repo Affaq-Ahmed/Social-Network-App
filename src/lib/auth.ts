@@ -13,35 +13,38 @@ import { IGetUserAuthRequest } from '../types/Request';
  * @access Public
  * @example http://localhost:3000/users/login
  */
-const userLogin = async (req: IGetUserAuthRequest, res: Response) => {
-	const { email, password } = req.body;
+const userLogin = async (email: string, password: string) => {
 	try {
 		const user = await User.findOne({ email });
 		if (!user) {
 			logger.info('User not found');
-			return res.status(400).json({
+			return {
+				status: 400,
 				message: 'User not found',
-			});
+			};
 		}
 		const isMatch = await bcrypt.compare(password, user.password);
 		if (!isMatch) {
 			logger.info('Invalid credentials');
-			return res.status(400).json({
+			return {
 				message: 'Invalid credentials',
-			});
+				status: 400,
+			};
 		}
 		await user.generateAuthToken();
 		logger.info('User logged in');
 
-		return res.status(200).json({
+		return {
 			message: 'Login successful',
+			status: 200,
 			user: user.publicProfile(),
-		});
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
@@ -54,19 +57,20 @@ const userLogin = async (req: IGetUserAuthRequest, res: Response) => {
  * @access Public
  * @example http://localhost:3000/users/register
  */
-const userSignup = async (req: IGetUserAuthRequest, res: Response) => {
-	const { name, email, password } = req.body;
-	let role;
-	if (req.body.userRole) {
-		role = req.body.userRole;
-	}
+const userSignup = async (
+	name: string,
+	email: string,
+	password: string,
+	role: string
+) => {
 	try {
 		const user = await User.findOne({ email });
 		if (user) {
 			logger.info('User already exists');
-			return res.status(400).json({
+			return {
 				message: 'User already exists',
-			});
+				status: 400,
+			};
 		}
 
 		const newUser = new User({
@@ -80,15 +84,16 @@ const userSignup = async (req: IGetUserAuthRequest, res: Response) => {
 		await newUser.save();
 
 		logger.info('User created');
-		return res.status(200).json({
+		return {
 			message: 'User created',
-			user: newUser.publicProfile(),
-		});
+			status: 201,
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
@@ -101,33 +106,37 @@ const userSignup = async (req: IGetUserAuthRequest, res: Response) => {
  * @access Private
  * @example http://localhost:3000/users/logout
  */
-const userLogout = async (req: IGetUserAuthRequest, res: Response) => {
+const userLogout = async (req: IGetUserAuthRequest) => {
 	try {
 		await req.user.removeToken(req.token);
 		logger.info('User logged out');
-		return res.status(200).json({
+		return {
 			message: 'Logout successful',
-		});
+			status: 200,
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
-const userLogoutAll = async (req: IGetUserAuthRequest, res: Response) => {
+const userLogoutAll = async (req: IGetUserAuthRequest) => {
 	try {
 		await req.user.removeAllTokens();
 		logger.info('User logged out from all devices');
-		return res.status(200).json({
+		return {
 			message: 'Logout successful',
-		});
+			status: 200,
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
