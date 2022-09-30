@@ -1,8 +1,18 @@
-import * as jwt from 'jsonwebtoken';
+import { verify } from '../util/jwt';
 import { Request, Response, NextFunction } from 'express';
 import { User } from '../models/user';
 import { IGetUserAuthRequest } from '../types/Request';
 
+/**
+ * @param req
+ * @param res
+ * @param next
+ * sets the user property on the request object
+ * if the token is valid
+ * @returns
+ * 401 if the token is invalid
+ * 500 if there is an error
+ */
 export const authenticateToken = async (
 	req: IGetUserAuthRequest,
 	res: Response,
@@ -15,7 +25,10 @@ export const authenticateToken = async (
 				message: 'No token provided.',
 			});
 		}
-		const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+		const decoded = (await verify(
+			token,
+			process.env.JWT_SECRET as string
+		)) as any;
 		const user = await User.findById(decoded._id);
 		if (!user) {
 			return res.status(401).json({

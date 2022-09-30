@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import MongooseDelete from 'mongoose-delete';
+import MongoosePaginate from 'mongoose-paginate-v2';
 
 interface IPost {
 	_id?: mongoose.Types.ObjectId;
@@ -39,5 +40,11 @@ const postSchema: mongoose.Schema<IPost> = new mongoose.Schema(
 );
 
 postSchema.plugin(MongooseDelete);
+postSchema.plugin(MongoosePaginate);
 
-export default mongoose.model<IPost>('Post', postSchema);
+const Post = mongoose.model<IPost, mongoose.PaginateModel<IPost>>(
+	'Post',
+	postSchema
+);
+
+export { Post, IPost };

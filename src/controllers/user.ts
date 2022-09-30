@@ -1,5 +1,12 @@
 import { Request, Response } from 'express';
-import { getAll, getById, follow, unfollow, getFollowed } from '../lib/user';
+import {
+	getAll,
+	getById,
+	follow,
+	unfollow,
+	getFollowed,
+	stripePayment,
+} from '../lib/user';
 
 const getAllUsers = async (req: Request, res: Response) => {
 	const response = await getAll(req, res);
@@ -21,4 +28,15 @@ const getFollowedUsers = async (req: Request, res: Response) => {
 	const response = await getFollowed(req, res);
 };
 
-export { getAllUsers, getUser, followUser, unfollowUser, getFollowedUsers };
+const stripePay = async (req: Request, res: Response) => {
+	const response = await stripePayment(req, res);
+};
+
+export {
+	getAllUsers,
+	getUser,
+	followUser,
+	unfollowUser,
+	getFollowedUsers,
+	stripePay,
+};

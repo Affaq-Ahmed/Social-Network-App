@@ -1,9 +1,8 @@
 import mongoose from 'mongoose';
-import * as jwt from 'jsonwebtoken';
+import { sign } from '../util/jwt';
 import MongooseDelete from 'mongoose-delete';
 
 enum roles {
-	ADMIN = 'ADMIN',
 	USER = 'USER',
 	MODERATOR = 'MODERATOR',
 }
@@ -15,6 +14,8 @@ interface IUser {
 	password: string;
 	userRole?: roles;
 	deleted?: boolean;
+	paid?: boolean;
+	paymentIntentId?: string;
 	posts?: mongoose.Types.ObjectId[];
 	followedUsers?: mongoose.Types.ObjectId[];
 	tokens?: string[];
@@ -50,6 +51,15 @@ const userSchema: mongoose.Schema<IUser> = new mongoose.Schema(
 			type: Boolean,
 			default: false,
 		},
+		paid: {
+			type: Boolean,
+			default: false,
+		},
+		paymentIntentId: {
+			type: String,
+			required: false,
+			trim: true,
+		},
 		tokens: [
 			{
 				token: {
@@ -67,7 +77,7 @@ const userSchema: mongoose.Schema<IUser> = new mongoose.Schema(
 		followedUsers: [
 			{
 				type: mongoose.Schema.Types.ObjectId,
-				ref: 'User',
+
 				default: [],
 			},
 		],
@@ -77,21 +87,37 @@ const userSchema: mongoose.Schema<IUser> = new mongoose.Schema(
 	}
 );
 
+/**
+ * @returns {Object} - Returns a public profile of the user
+ */
 userSchema.methods.publicProfile = function () {
 	const user = this.toObject();
 	delete user.password;
 	return user;
 };
 
-userSchema.methods.generateAuthToken = function () {
-	const token = jwt.sign(
-		{ _id: this._id.toString(), userRole: this.userRole },
-		process.env.JWT_SECRET as string
+/**
+ *
+ * @returns {Object} - Returns a token for the user
+ */
+userSchema.methods.generateAuthToken = async function () {
+	const option = {
+		expiresIn: '1h',
+	};
+	const token = await sign(
+		{ _id: this._id, userRole: this.userRole },
+		process.env.JWT_SECRET as string,
+		option
 	);
 	this.tokens = this.tokens.concat({ token });
 	return this.save().then(() => token);
 };
 
+/**
+ *
+ * @param token - Token to be removed
+ * @returns {Object} - Returns the user
+ */
 userSchema.methods.removeToken = function (token: string) {
 	this.tokens = this.tokens.filter((t: any) => t.token !== token);
 	return this.save();
