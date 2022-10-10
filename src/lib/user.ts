@@ -17,23 +17,24 @@ const stripe = new Stripe(
  * @route  GET /users
  * @access Public
  */
-const getAll = async (req: IGetUserAuthRequest, res: Response) => {
-	const { page = 1, limit = 10 } = req.query;
+const getAll = async (page: number, limit: number) => {
 	try {
 		const users = await User.find({})
 			.skip(((page as number) - 1) * (limit as number))
 			.limit(limit as number)
 			.select('-password');
 		logger.info('Users found');
-		return res.status(200).json({
+		return {
 			message: 'Users found',
 			users,
-		});
+			status: 200,
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
@@ -45,20 +46,21 @@ const getAll = async (req: IGetUserAuthRequest, res: Response) => {
  * @returns {IUser}
  * @throws {Error}
  */
-const getById = async (req: IGetUserAuthRequest, res: Response) => {
-	const { userId } = req.params;
+const getById = async (userId: string) => {
 	try {
 		const user = await User.findById(userId);
 		logger.info('User found');
-		return res.status(200).json({
+		return {
 			message: 'User found',
 			user,
-		});
+			status: 200,
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
@@ -69,35 +71,39 @@ const getById = async (req: IGetUserAuthRequest, res: Response) => {
  * @param {string} id
  * @returns {IUser}
  */
-const follow = async (req: IGetUserAuthRequest, res: Response) => {
-	const { id } = req.params;
-	const { user } = req;
+const follow = async (userIdToFollow: string, user: any) => {
 	try {
-		const userToFollow = await User.findById(id);
+		const userToFollow = await User.findById(userIdToFollow);
 		if (!userToFollow) {
 			logger.info('User not found');
-			return res.status(400).json({
+			return {
 				message: 'User not found',
-			});
+				status: 400,
+			};
 		}
-		if (user.followedUsers.includes(userToFollow._id)) {
+		if (user.followedUsers!.includes(userToFollow._id)) {
 			logger.info('User already followed');
-			return res.status(400).json({
+			return {
 				message: 'User already followed',
-			});
+				status: 400,
+			};
 		}
-		user.followedUsers.push(userToFollow);
+
+		user.followedUsers!.push(userToFollow._id);
 		await user.save();
+
 		logger.info('User followed');
-		return res.status(200).json({
+		return {
 			message: 'User followed',
 			user: user.publicProfile(),
-		});
+			status: 200,
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
@@ -108,36 +114,38 @@ const follow = async (req: IGetUserAuthRequest, res: Response) => {
  * @param {string} id
  * @returns {IUser}
  */
-const unfollow = async (req: IGetUserAuthRequest, res: Response) => {
-	const { id } = req.params;
-	const { user } = req;
+const unfollow = async (userIdToUnfollow: string, user: any) => {
 	try {
-		const userToUnfollow = await User.findById(id);
+		const userToUnfollow = await User.findById(userIdToUnfollow);
 		if (!userToUnfollow) {
 			logger.info('User not found');
-			return res.status(400).json({
+			return {
 				message: 'User not found',
-			});
+				status: 400,
+			};
 		}
 		if (user.followedUsers.includes(userToUnfollow._id)) {
 			user.followedUsers.pull(userToUnfollow);
 		} else {
 			logger.info('User not followed');
-			return res.status(400).json({
+			return {
 				message: 'User not followed',
-			});
+				status: 400,
+			};
 		}
 		await user.save();
 		logger.info('User unfollowed');
-		return res.status(200).json({
+		return {
 			message: 'User unfollowed',
 			user: user.publicProfile(),
-		});
+			status: 200,
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
@@ -147,20 +155,28 @@ const unfollow = async (req: IGetUserAuthRequest, res: Response) => {
  * @access Private
  * @returns {IUser[]}
  */
-const getFollowed = async (req: IGetUserAuthRequest, res: Response) => {
-	const { user } = req;
+const getFollowed = async (followedUsers: [string]) => {
 	try {
-		const users = await User.find({ _id: { $in: user.followedUsers } });
+		const users = await User.find({ _id: { $in: followedUsers } });
+		if (users.length === 0) {
+			logger.info('No followed users');
+			return {
+				message: 'No followed users',
+				status: 200,
+			};
+		}
 		logger.info('Users found');
-		return res.status(200).json({
+		return {
 			message: 'Users found',
 			users,
-		});
+			status: 200,
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
@@ -176,18 +192,22 @@ const getFollowed = async (req: IGetUserAuthRequest, res: Response) => {
  * and the cvc is 123
  * @see https://stripe.com/docs/testing
  */
-const stripePayment = async (req: IGetUserAuthRequest, res: Response) => {
-	const { user } = req;
-	const { card_number, exp_month, exp_year, cvc } = req.body;
+const stripePayment = async (
+	card_number: string,
+	exp_month: string,
+	exp_year: string,
+	cvc: string,
+	user: any
+) => {
 	try {
 		const paymentMethod = await stripe.paymentMethods.create({
 			type: 'card',
 			card: {
-				number: card_number,
-				exp_month: exp_month,
-				exp_year: exp_year,
-				cvc: cvc,
-			},
+				number: card_number as string,
+				exp_month: exp_month as string,
+				exp_year: exp_year as string,
+				cvc: cvc as string,
+			} as any,
 		});
 		const paymentIntent = await stripe.paymentIntents.create({
 			payment_method: paymentMethod.id,
@@ -201,20 +221,23 @@ const stripePayment = async (req: IGetUserAuthRequest, res: Response) => {
 			user.paymentIntentId = paymentIntent.id;
 			await user.save();
 			logger.info('Stripe payment succeeded');
-			return res.status(200).json({
+			return {
 				message: 'Stripe payment succeeded',
 				user: user.publicProfile(),
-			});
+				status: 200,
+			};
 		}
 		logger.info('Stripe payment failed');
-		return res.status(400).json({
+		return {
 			message: 'Stripe payment failed',
-		});
+			status: 400,
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 

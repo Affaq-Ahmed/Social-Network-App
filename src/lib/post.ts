@@ -3,6 +3,9 @@ import { Post } from '../models/post';
 import { logger } from '../middleware/logger';
 import { IGetUserAuthRequest } from '../types/Request';
 import io from '../startup/socket';
+import { Comment } from '../models/comment';
+import { ObjectId } from 'mongoose';
+import { IUser } from '../models/user';
 
 /**
  * @desc Get all posts
@@ -10,36 +13,37 @@ import io from '../startup/socket';
  * @access restricted
  * @Query page, limit
  */
-const getAll = async (req: IGetUserAuthRequest, res: Response) => {
-	const { page = 1, limit = 10 } = req.query;
+const getAll = async (page: number, limit: number, role: string) => {
 	try {
 		let posts;
-		if (req.user.role === 'MODERATOR') {
+		if (role === 'MODERATOR') {
 			//REMOVE ALL USER INFO FROM POST
 			posts = await Post.find({})
-				.skip(((page as number) - 1) * (limit as number))
-				.limit(limit as number)
+				.skip((page - 1) * limit)
+				.limit(limit)
 				.sort({ createdAt: -1 })
 				.select('-createdBy');
 		} else {
-			posts = await Post.find({})
-				.skip(((page as number) - 1) * (limit as number))
-				.limit(limit as number)
-				.populate('createdBy', '-password -tokens')
-				.sort({ createdAt: -1 })
-				.where('deleted')
-				.equals(false);
+			posts = await Post.find({
+				deleted: false,
+			})
+				.skip((page - 1) * limit)
+				.limit(limit)
+				.populate('createdBy', 'name email')
+				.sort({ createdAt: -1 });
 		}
 		logger.info('Posts found');
-		return res.status(200).json({
+		return {
 			message: 'Posts found',
+			status: 200,
 			posts,
-		});
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
@@ -50,23 +54,21 @@ const getAll = async (req: IGetUserAuthRequest, res: Response) => {
  * @access Moderator
  * @Param id
  */
-const getById = async (req: IGetUserAuthRequest, res: Response) => {
-	const { id } = req.params;
+const getById = async (id: string) => {
 	try {
-		const post = await Post.findById(id).populate(
-			'createdBy',
-			'-password -tokens'
-		);
+		const post = await Post.findById(id).populate('createdBy', 'name email');
 		logger.info('Post found');
-		return res.status(200).json({
+		return {
 			message: 'Post found',
+			status: 200,
 			post,
-		});
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
@@ -77,33 +79,33 @@ const getById = async (req: IGetUserAuthRequest, res: Response) => {
  * @access Moderator can't create post
  * @Body title, content
  */
-const create = async (req: IGetUserAuthRequest, res: Response) => {
-	const { title, content } = req.body;
-	const { user } = req;
-	if (req.user.role === 'MODERATOR') {
-		return res.status(403).json({
-			message: 'Moderators cannot create posts',
-		});
-	}
+const create = async (title: string, content: string, createdBy: string) => {
 	try {
 		const post = new Post({
 			title,
 			content,
-			createdBy: user._id,
+			createdBy,
 			createdAt: new Date().toISOString(),
 		});
 		const savedPost = await post.save();
+
+		
+
+		//SEND SOCKET EVENT
 		io.getIO().emit('posts', { action: 'create', post: savedPost });
+
 		logger.info('Post created');
-		return res.status(201).json({
+		return {
 			message: 'Post created',
+			status: 201,
 			post: savedPost,
-		});
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
@@ -115,22 +117,27 @@ const create = async (req: IGetUserAuthRequest, res: Response) => {
  * @Param id
  * @Body title or content or Both
  */
-const update = async (req: IGetUserAuthRequest, res: Response) => {
-	const { id } = req.params;
-	const { title, content } = req.body;
+const update = async (
+	id: string,
+	title: string,
+	content: string,
+	userId: string
+) => {
 	try {
 		const post = await Post.findById(id);
 		if (!post) {
 			logger.info('Post not found');
-			return res.status(400).json({
+			return {
 				message: 'Post not found',
-			});
+				status: 400,
+			};
 		}
-		if (post.createdBy.toString() !== req.user._id.toString() || post.deleted) {
+		if (post.createdBy.toString() !== userId.toString() || post.deleted) {
 			logger.info('Unauthorized');
-			return res.status(401).json({
+			return {
 				message: 'Unauthorized',
-			});
+				status: 401,
+			};
 		}
 		if (title) {
 			post.title = title;
@@ -140,15 +147,17 @@ const update = async (req: IGetUserAuthRequest, res: Response) => {
 		}
 		const updatedPost = await post.save();
 		logger.info('Post updated');
-		return res.status(200).json({
+		return {
 			message: 'Post updated',
+			status: 200,
 			post: updatedPost,
-		});
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
@@ -159,35 +168,38 @@ const update = async (req: IGetUserAuthRequest, res: Response) => {
  * @access Moderator can delete post
  * @Param id
  */
-const remove = async (req: IGetUserAuthRequest, res: Response) => {
-	const { id } = req.params;
+const remove = async (id: string, userId: string, userRole: string) => {
 	try {
 		const post = await Post.findById(id);
 		if (!post) {
 			logger.info('Post not found');
-			return res.status(400).json({
+			return {
 				message: 'Post not found',
-			});
+				status: 400,
+			};
 		}
 		if (
-			post.createdBy.toString() !== req.user._id.toString() ||
-			req.user.userRole !== 'MODERATOR'
+			post.createdBy.toString() !== userId.toString() ||
+			userRole !== 'MODERATOR'
 		) {
 			logger.info('Unauthorized');
-			return res.status(401).json({
+			return {
 				message: 'Unauthorized',
-			});
+				status: 401,
+			};
 		}
 		await post.delete();
 		logger.info('Post deleted');
-		return res.status(200).json({
+		return {
 			message: 'Post deleted',
-		});
+			status: 200,
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
@@ -198,29 +210,34 @@ const remove = async (req: IGetUserAuthRequest, res: Response) => {
  * @Param id
  * @Query page, limit, desc
  */
-const allPostsByUser = async (req: IGetUserAuthRequest, res: Response) => {
-	const { page = 1, limit = 10, desc = true } = req.query;
-	const { user } = req;
+const allPostsByUser = async (
+	page: number,
+	limit: number,
+	desc: string,
+	userId: string
+) => {
 	try {
 		const posts = await Post.paginate(
-			{ createdBy: user._id },
+			{ createdBy: userId },
 			{
-				page: page as number,
-				limit: limit as number,
-				populate: 'author',
+				page: page,
+				limit: limit,
+				populate: 'createdBy',
 				sort: { createdAt: desc === 'true' ? -1 : 1 },
 			}
 		);
 		logger.info('Posts found');
-		return res.status(200).json({
+		return {
 			message: 'Posts found',
+			status: 200,
 			posts,
-		});
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
@@ -231,37 +248,201 @@ const allPostsByUser = async (req: IGetUserAuthRequest, res: Response) => {
  * @Query page, limit, desc
  * @access Moderator can't get feed
  * @access User can't get getFeed if he has no friends
- * 
+ *
  */
-const feed = async (req: IGetUserAuthRequest, res: Response) => {
-	const { page = 1, limit = 10, desc = true } = req.query;
-	const { user } = req;
-	if (!user.paid) {
-		return res.status(401).json({
-			message: 'Please upgrade your account to see the feed.',
-		});
-	}
+const feed = async (
+	page: number,
+	limit: number,
+	desc: string,
+	followedUsers: [string]
+) => {
 	try {
 		const posts = await Post.paginate(
-			{ createdBy: { $in: user.followedUsers } },
+			{ createdBy: { $in: followedUsers } },
 			{
-				page: page as number,
-				limit: limit as number,
+				page: page,
+				limit: limit,
 				sort: { createdAt: desc === 'true' ? -1 : 1 },
 			}
 		);
 		logger.info('Posts found');
-
-		return res.status(200).json({
+		
+		return {
 			message: 'Posts found',
+			status: 200,
 			posts,
-		});
+		};
 	} catch (error: any) {
 		logger.error(error.message);
-		return res.status(400).json({
+		return {
 			message: error.message,
-		});
+			status: 400,
+		};
 	}
 };
 
-export { getAll, getById, create, update, remove, allPostsByUser, feed };
+/**
+ * @desc Like a post
+ * @route PUT /post/like/:id
+ * @access Authenticated
+ * @Param postId
+ * @access Moderator can't like post
+ * @access User can't like post if he has no friends
+ */
+const like = async (postId: string, user: IUser) => {
+	try {
+		const post = await Post.findById(postId);
+		if (!post) {
+			logger.info('Post not found');
+			return {
+				message: 'Post not found',
+				status: 400,
+			};
+		}
+		if (post.likes?.includes(user._id!)) {
+			logger.info('Post already liked');
+			return {
+				message: 'Post already liked',
+				status: 400,
+			};
+		}
+		post.likes?.push(user._id!);
+		post.likesCount = post.likes?.length;
+		const savedPost = await post.save();
+		logger.info('Post liked');
+		return {
+			message: 'Post liked',
+			status: 200,
+			post: savedPost,
+		};
+	} catch (error: any) {
+		logger.error(error.message);
+		return {
+			message: error.message,
+			status: 400,
+		};
+	}
+};
+
+/**
+ * @desc Unlike a post
+ * @route PUT /post/unlike/:id
+ * @access Authenticated
+ * @Param postId
+ * @access Moderator can't unlike post
+ * @access User can't unlike post if he has no friends
+ */
+const unlike = async (postId: string, user: IUser) => {
+	try {
+		const post = await Post.findById(postId);
+		if (!post) {
+			logger.info('Post not found');
+			return {
+				message: 'Post not found',
+				status: 400,
+			};
+		}
+		if (!post.likes?.includes(user._id!)) {
+			logger.info('Post not liked');
+			return {
+				message: 'Post not liked',
+				status: 400,
+			};
+		}
+		post.likes = post.likes?.filter((like) => like !== user._id);
+		post.likesCount = post.likes?.length;
+		const savedPost = await post.save();
+		logger.info('Post unliked');
+		return {
+			message: 'Post unliked',
+			status: 200,
+			post: savedPost,
+		};
+	} catch (error: any) {
+		logger.error(error.message);
+		return {
+			message: error.message,
+			status: 400,
+		};
+	}
+};
+
+/**
+ * @desc Get all comments with replies in graph format
+ * @route GET /post/:id/comments
+ * @access Authenticated
+ * @Param id
+ * @Query page, limit, desc
+ * @access Moderator can't get comments
+ * @access User can't get comments if post is deleted
+ * @access User can't get comments if post is not his and he is not following the user
+ */
+const getComments = async (postId: string, user: IUser) => {
+	try {
+		const post = await Post.findById(postId);
+		if (!post) {
+			logger.info('Post not found');
+			return {
+				message: 'Post not found',
+				status: 400,
+			};
+		}
+		if (post.deleted) {
+			logger.info('Post is deleted');
+			return {
+				message: 'Post is deleted',
+				status: 400,
+			};
+		}
+		if (
+			post.createdBy.toString() !== user._id!.toString() &&
+			!user.followedUsers!.includes(post.createdBy)
+		) {
+			logger.info('Unauthorized');
+			return {
+				message: 'Unauthorized',
+				status: 401,
+			};
+		}
+		const comments = await Comment.find({ postId, deleted: false });
+
+		const graph = comments.reduce((acc: any, comment: any) => {
+			acc[comment._id] = {
+				...comment._doc,
+				replies: [],
+			};
+			return acc;
+		}, {});
+
+		graph.forEach((comment: { replyTo: string | number }) => {
+			if (comment.replyTo) {
+				graph[comment.replyTo].replies.push(comment);
+			}
+		});
+
+		logger.info('Comments found');
+		return {
+			message: 'Comments found',
+			status: 200,
+		};
+	} catch (error: any) {
+		logger.error(error.message);
+		return {
+			message: error.message,
+			status: 400,
+		};
+	}
+};
+
+export {
+	getAll,
+	getById,
+	create,
+	update,
+	remove,
+	allPostsByUser,
+	feed,
+	like,
+	unlike,
+	getComments,
+};
